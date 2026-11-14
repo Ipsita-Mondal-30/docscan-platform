@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr l
 COPY --from=builder /install /usr/local
 WORKDIR /srv
 COPY app/ /srv/
-ENV PYTHONUNBUFFERED=1 DOCSCAN_UPLOAD_DIR=/data/uploads
+ENV OMP_THREAD_LIMIT=1 PYTHONUNBUFFERED=1 DOCSCAN_UPLOAD_DIR=/data/uploads
 RUN mkdir -p /data/uploads && chown -R app /data
 USER 10001
 EXPOSE 8000 9100

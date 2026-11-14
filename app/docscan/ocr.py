@@ -5,6 +5,8 @@ from typing import Protocol
 import cv2
 import numpy as np
 
+cv2.setNumThreads(1)  # one worker = one core; parallelism comes from replicas, not threads
+
 
 @dataclass
 class OcrResult:
@@ -32,10 +34,19 @@ class TesseractEngine:
     def run(self, image: np.ndarray) -> OcrResult:
         import pytesseract  # imported lazily so the API image/tests don't need the binary
 
+        # single Tesseract pass: derive both text and confidence from image_to_data
         data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-        words = [(w, float(c)) for w, c in zip(data["text"], data["conf"]) if w.strip() and float(c) >= 0]
-        text = pytesseract.image_to_string(image).strip()
-        conf = sum(c for _, c in words) / len(words) if words else 0.0
+        lines: dict[tuple, list[str]] = {}
+        confs: list[float] = []
+        for i, word in enumerate(data["text"]):
+            conf = float(data["conf"][i])
+            if not word.strip() or conf < 0:
+                continue
+            key = (data["block_num"][i], data["par_num"][i], data["line_num"][i])
+            lines.setdefault(key, []).append(word)
+            confs.append(conf)
+        text = "\n".join(" ".join(ws) for _, ws in sorted(lines.items()))
+        conf = sum(confs) / len(confs) if confs else 0.0
         return OcrResult(text=text, confidence=round(conf, 2), engine=self.name)
 
 

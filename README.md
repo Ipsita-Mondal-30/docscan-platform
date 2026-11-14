@@ -13,6 +13,16 @@ Client -> Ingress (nginx) -> API (FastAPI) -> Redis queue -> OCR workers (OpenCV
 ```
 `POST /v1/jobs` stores the upload, records a job in MySQL, enqueues it, and returns `202`. Workers pick jobs up, preprocess the image (denoise, adaptive threshold), run Tesseract, and store text plus a mean word-confidence score. Results below a threshold are flagged `low_confidence` instead of silently trusted. Poll `GET /v1/jobs/{id}`.
 
+## Screenshots
+**Grafana**: throughput, queue depth, OCR latency (p50/p95), and confidence under a burst of 110 jobs on two workers.
+![Grafana dashboard](docs/screenshots/grafana-dashboard.png)
+
+**Prometheus**: API and both workers scraped successfully.
+![Prometheus targets](docs/screenshots/prometheus-targets.png)
+
+**API docs** (FastAPI/OpenAPI):
+![API docs](docs/screenshots/api-docs.png)
+
 ## DevOps map
 | Area | Where |
 |---|---|
@@ -31,6 +41,7 @@ Client -> Ingress (nginx) -> API (FastAPI) -> Redis queue -> OCR workers (OpenCV
 make up                                   # api :8000, prometheus :9090, grafana :3000
 curl -F file=@scan.png http://localhost:8000/v1/jobs
 curl http://localhost:8000/v1/jobs/<id>
+# port 8000 busy? API_PORT=8080 docker compose up -d --build
 ```
 
 ## Run on Kubernetes (kind)
@@ -47,6 +58,11 @@ Then install Argo CD and `kubectl apply -f argocd/application.yaml` to let git d
 pip install -r requirements-dev.txt && pytest -q
 ```
 Tests use an in-memory queue, SQLite, and a fake OCR engine, so they need no services.
+
+## Performance notes (found while load-testing)
+First run: ~6 s per small invoice and a growing queue. Two fixes took it to **~0.4 s p50 / <1 s p95 and ~2 jobs/s on two workers**:
+1. **Thread oversubscription.** Tesseract (OpenMP) and OpenCV each spawned threads per worker, so workers fought over CPUs. Fix: `OMP_THREAD_LIMIT=1` and `cv2.setNumThreads(1)`. One worker is one core, and parallelism comes from replicas.
+2. **Double OCR pass.** Text and confidence came from two Tesseract calls. Fix: derive both from one `image_to_data` call.
 
 ## Design decisions
 - **Async queue** keeps API latency flat; OCR time never blocks requests.

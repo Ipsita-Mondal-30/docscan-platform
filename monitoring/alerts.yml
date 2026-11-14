@@ -2,7 +2,7 @@ groups:
   - name: docscan
     rules:
       - alert: QueueBacklog
-        expr: docscan_queue_depth > 50
+        expr: max(docscan_queue_depth) > 50
         for: 5m
         labels: {severity: warning}
         annotations: {summary: "Queue depth > 50 for 5m: scale workers or check for stuck jobs (docs/runbook.md)"}

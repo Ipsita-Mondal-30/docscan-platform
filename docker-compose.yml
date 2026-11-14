@@ -19,7 +19,7 @@ services:
     environment: &env
       DOCSCAN_DATABASE_URL: mysql+pymysql://docscan:docscanpw@mysql:3306/docscan
       DOCSCAN_REDIS_URL: redis://redis:6379/0
-    ports: ["8000:8000"]
+    ports: ["${API_PORT:-8000}:8000"]
     volumes: [uploads:/data/uploads]
     depends_on: {mysql: {condition: service_healthy}, redis: {condition: service_healthy}}
   worker:
@@ -36,5 +36,12 @@ services:
   grafana:
     image: grafana/grafana:11.2.0
     ports: ["3000:3000"]
-    volumes: ["./monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/ds.yml:ro"]
+    environment:  # anonymous viewer access: demo only
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/grafana-dashboard.json
+    volumes:
+      - ./monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/ds.yml:ro
+      - ./monitoring/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dash.yml:ro
+      - ./monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/grafana-dashboard.json:ro
 volumes: {mysql-data: {}, uploads: {}}
