@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.12-slim
 # tesseract is only needed by workers, but one image keeps CI/CD simple
-RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr libglib2.0-0 \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends tesseract-ocr libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --uid 10001 --create-home app
 COPY --from=builder /install /usr/local

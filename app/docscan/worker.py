@@ -3,6 +3,7 @@ import logging
 import signal
 import time
 
+import redis
 from prometheus_client import start_http_server
 
 from .config import settings
@@ -57,7 +58,12 @@ def main():
     signal.signal(signal.SIGINT, stop)
     log.info("worker started")
     while _running:
-        job_id = q.pop(timeout=5)
+        try:
+            job_id = q.pop(timeout=5)
+        except redis.exceptions.RedisError:
+            log.exception("redis unavailable, retrying in 2s")
+            time.sleep(2)
+            continue
         if job_id:
             process_job(job_id, engine)
     log.info("worker stopped")

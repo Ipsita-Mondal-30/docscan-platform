@@ -8,7 +8,8 @@ from .config import settings
 
 class RedisQueue:
     def __init__(self, url: str | None = None, name: str | None = None):
-        self.r = redis.Redis.from_url(url or settings.redis_url)
+        # socket timeout must exceed the BLPOP block time, or idle workers die with TimeoutError
+        self.r = redis.Redis.from_url(url or settings.redis_url, socket_timeout=30, socket_connect_timeout=5)
         self.name = name or settings.queue_name
 
     def push(self, job_id: str) -> None:

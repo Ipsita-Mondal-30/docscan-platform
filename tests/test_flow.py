@@ -3,12 +3,11 @@ import io
 import cv2
 import numpy as np
 import pytest
-from fastapi.testclient import TestClient
-
 from docscan import api, worker
 from docscan.db import init_db
 from docscan.ocr import OcrResult, preprocess
 from docscan.queue import MemoryQueue
+from fastapi.testclient import TestClient
 
 
 class FakeEngine:
