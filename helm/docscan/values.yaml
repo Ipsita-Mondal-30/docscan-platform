@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/Ipsita-Mondal-30/docscan-platform
+  repository: ghcr.io/ipsita-mondal-30/docscan-platform
   tag: "latest"
 api:
   replicas: 2
