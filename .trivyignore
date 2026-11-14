@@ -1,0 +1,7 @@
+# Accepted risk, reviewed 2026-11-14. Re-check when upgrading cryptography.
+# python-cryptography < 49/50: PKCS#7 parsing issues. DocScan never parses PKCS#7 data;
+# cryptography is only a transitive dependency of PyMySQL (MySQL caching_sha2_password handshake).
+# Fixed versions (>=49/50) currently crash with SIGILL on arm64 Linux VMs (Colima/Apple Silicon),
+# which breaks local development, so we stay on the 46.x line until that is resolved upstream.
+CVE-2026-69247
+CVE-2026-69249
