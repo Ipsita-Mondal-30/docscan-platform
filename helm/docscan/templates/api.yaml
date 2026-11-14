@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: docscan-api, labels: {app: docscan-api}}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector: {matchLabels: {app: docscan-api}}
+  template:
+    metadata:
+      labels: {app: docscan-api}
+      annotations: {prometheus.io/scrape: "true", prometheus.io/port: "8000", prometheus.io/path: /metrics}
+    spec:
+      securityContext: {fsGroup: 10001}
+      containers:
+        - name: api
+          image: {{ include "docscan.image" . }}
+          ports: [{containerPort: 8000, name: http}]
+          env:
+{{ include "docscan.env" . | indent 12 }}
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, initialDelaySeconds: 10}
+          resources: {{ toYaml .Values.api.resources | nindent 12 }}
+          securityContext:
+{{ include "docscan.secctx" . | indent 12 }}
+          volumeMounts: [{name: uploads, mountPath: /data/uploads}]
+      volumes: [{name: uploads, persistentVolumeClaim: {claimName: docscan-uploads}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: docscan-api}
+spec:
+  selector: {app: docscan-api}
+  ports: [{port: 80, targetPort: http}]
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: {name: docscan}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - {path: /, pathType: Prefix, backend: {service: {name: docscan-api, port: {number: 80}}}}
+{{- end }}

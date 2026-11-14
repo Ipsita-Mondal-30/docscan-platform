@@ -1,0 +1,8 @@
+# Shared upload volume. RWX is needed when api and workers sit on different nodes;
+# on the single-node kind demo RWO works. On AWS use EFS (see terraform notes).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: docscan-uploads}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: {{ .Values.storage.uploadsSize }}}}

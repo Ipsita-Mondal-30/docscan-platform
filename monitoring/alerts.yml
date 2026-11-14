@@ -1,0 +1,23 @@
+groups:
+  - name: docscan
+    rules:
+      - alert: QueueBacklog
+        expr: docscan_queue_depth > 50
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Queue depth > 50 for 5m: scale workers or check for stuck jobs (docs/runbook.md)"}
+      - alert: HighJobFailureRate
+        expr: sum(rate(docscan_jobs_processed_total{status="failed"}[5m])) / clamp_min(sum(rate(docscan_jobs_processed_total[5m])), 1e-9) > 0.1
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "More than 10% of OCR jobs failing"}
+      - alert: SlowOCR
+        expr: histogram_quantile(0.95, sum(rate(docscan_ocr_duration_seconds_bucket[5m])) by (le)) > 10
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "p95 OCR latency above 10s"}
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.job }} target down"}

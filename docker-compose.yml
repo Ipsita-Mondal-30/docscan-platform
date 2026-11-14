@@ -1,0 +1,40 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: docscan
+      MYSQL_USER: docscan
+      MYSQL_PASSWORD: docscanpw
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpw"]
+      interval: 5s
+      retries: 20
+    volumes: [mysql-data:/var/lib/mysql]
+  redis:
+    image: redis:7-alpine
+    healthcheck: {test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10}
+  api:
+    build: .
+    environment: &env
+      DOCSCAN_DATABASE_URL: mysql+pymysql://docscan:docscanpw@mysql:3306/docscan
+      DOCSCAN_REDIS_URL: redis://redis:6379/0
+    ports: ["8000:8000"]
+    volumes: [uploads:/data/uploads]
+    depends_on: {mysql: {condition: service_healthy}, redis: {condition: service_healthy}}
+  worker:
+    build: .
+    command: ["python", "-m", "docscan.worker"]
+    environment: *env
+    volumes: [uploads:/data/uploads]
+    depends_on: {mysql: {condition: service_healthy}, redis: {condition: service_healthy}}
+    deploy: {replicas: 2}
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro", "./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro"]
+    ports: ["9090:9090"]
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports: ["3000:3000"]
+    volumes: ["./monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/ds.yml:ro"]
+volumes: {mysql-data: {}, uploads: {}}

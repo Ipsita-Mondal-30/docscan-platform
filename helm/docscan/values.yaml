@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/Ipsita-Mondal-30/docscan-platform
+  tag: "latest"
+api:
+  replicas: 2
+  resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
+worker:
+  minReplicas: 2
+  maxReplicas: 10
+  cpuTarget: 70
+  resources: {requests: {cpu: 250m, memory: 256Mi}, limits: {cpu: "1", memory: 512Mi}}
+ingress:
+  enabled: true
+  host: docscan.localtest.me
+  className: nginx
+config:
+  redisUrl: redis://redis:6379/0
+  mysqlHost: mysql
+  mysqlDatabase: docscan
+  mysqlUser: docscan
+# In real clusters inject this via External Secrets / Sealed Secrets, never plain values.
+secrets:
+  mysqlPassword: change-me
+storage:
+  uploadsSize: 1Gi
+networkPolicy:
+  enabled: true

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: docscan-worker, labels: {app: docscan-worker}}
+spec:
+  selector: {matchLabels: {app: docscan-worker}}
+  template:
+    metadata:
+      labels: {app: docscan-worker}
+      annotations: {prometheus.io/scrape: "true", prometheus.io/port: "9100"}
+    spec:
+      securityContext: {fsGroup: 10001}
+      terminationGracePeriodSeconds: 60  # lets a running OCR job finish on SIGTERM
+      containers:
+        - name: worker
+          image: {{ include "docscan.image" . }}
+          command: ["python", "-m", "docscan.worker"]
+          ports: [{containerPort: 9100, name: metrics}]
+          env:
+{{ include "docscan.env" . | indent 12 }}
+          livenessProbe: {httpGet: {path: /, port: metrics}, initialDelaySeconds: 15}
+          resources: {{ toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+{{ include "docscan.secctx" . | indent 12 }}
+          volumeMounts: [{name: uploads, mountPath: /data/uploads}]
+      volumes: [{name: uploads, persistentVolumeClaim: {claimName: docscan-uploads}}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: docscan-worker}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: docscan-worker}
+  minReplicas: {{ .Values.worker.minReplicas }}
+  maxReplicas: {{ .Values.worker.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: {{ .Values.worker.cpuTarget }}}}

@@ -1,0 +1,6 @@
+.git
+tests
+terraform
+helm
+*.db
+__pycache__

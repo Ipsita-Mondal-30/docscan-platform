@@ -1,0 +1,7 @@
+__pycache__/
+*.db
+.venv/
+.terraform/
+*.tfstate*
+.pytest_cache/
+.ruff_cache/
