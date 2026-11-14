@@ -5,3 +5,5 @@ __pycache__/
 *.tfstate*
 .pytest_cache/
 .ruff_cache/
+config.bat
+node_modules
